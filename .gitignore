@@ -46,3 +46,6 @@ htmlcov/
 *.pem
 credentials.json
 secrets.json
+
+# Data files
+data/

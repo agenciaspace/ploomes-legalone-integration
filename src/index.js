@@ -6,6 +6,7 @@
 require('dotenv').config();
 const PloomesClient = require('./ploomesClient');
 const LegalOneClient = require('./legalOneClient');
+const SyncManager = require('./syncManager');
 
 // Initialize clients
 const ploomesClient = new PloomesClient(
@@ -18,28 +19,45 @@ const legalOneClient = new LegalOneClient(
   process.env.LEGALONE_API_KEY
 );
 
-console.log('Ploomes & Legal One Integration starting...');
+// Initialize sync manager
+const syncManager = new SyncManager(ploomesClient, legalOneClient);
+
+console.log('\n╔════════════════════════════════════════════════════════════╗');
+console.log('║   Ploomes & Legal One Integration Service                 ║');
+console.log('╚════════════════════════════════════════════════════════════╝\n');
+
 console.log('Configuration:');
-console.log('- Ploomes API:', process.env.PLOOMES_API_URL || 'https://api2.ploomes.com');
-console.log('- Legal One API:', process.env.LEGALONE_API_URL || 'Not configured');
-console.log('- Sync Interval:', process.env.SYNC_INTERVAL || '3600', 'seconds');
+console.log('  📊 Ploomes API:', process.env.PLOOMES_API_URL || 'https://api2.ploomes.com');
+console.log('  ⚖️  Legal One API:', process.env.LEGALONE_API_URL || '⚠️  Not configured');
+console.log('  ⏱️  Sync Interval:', process.env.SYNC_INTERVAL || '3600', 'seconds');
+console.log('  📁 Log Level:', process.env.LOG_LEVEL || 'info');
+
+const stats = syncManager.getStats();
+console.log('\nSync Status:');
+console.log('  👥 Contacts Mapped:', stats.totalContactsMapped);
+console.log('  💼 Deals Mapped:', stats.totalDealsMapped);
+console.log('\n' + '─'.repeat(60) + '\n');
 
 /**
  * Sync workflow: Ploomes -> Legal One
  */
 async function syncPloomesToLegalOne() {
   try {
-    console.log('\n[SYNC] Starting Ploomes -> Legal One sync...');
+    console.log('\n[SYNC] Starting Ploomes → Legal One sync...');
     
-    // TODO: Implement sync logic
-    // 1. Fetch new/updated contacts from Ploomes
-    // 2. Map to Legal One format
-    // 3. Create/update in Legal One
-    // 4. Store mapping for future reference
+    // Check if Legal One is configured
+    if (!process.env.LEGALONE_API_KEY) {
+      console.log('[SYNC] ⚠️  Legal One API not configured. Skipping sync.');
+      console.log('[SYNC] To enable: Set LEGALONE_API_KEY in .env file');
+      return;
+    }
     
-    console.log('[SYNC] Sync completed successfully');
+    // Sync recent contacts
+    await syncManager.syncRecentContacts(10);
+    
+    console.log('[SYNC] ✅ Sync completed successfully');
   } catch (error) {
-    console.error('[SYNC] Sync failed:', error.message);
+    console.error('[SYNC] ❌ Sync failed:', error.message);
   }
 }
 
@@ -48,16 +66,22 @@ async function syncPloomesToLegalOne() {
  */
 async function syncLegalOneToPloomes() {
   try {
-    console.log('\n[SYNC] Starting Legal One -> Ploomes sync...');
+    console.log('\n[SYNC] Starting Legal One → Ploomes sync...');
     
-    // TODO: Implement sync logic
+    // Check if Legal One is configured
+    if (!process.env.LEGALONE_API_KEY) {
+      console.log('[SYNC] ⚠️  Legal One API not configured. Skipping sync.');
+      return;
+    }
+    
+    // TODO: Implement reverse sync logic
     // 1. Fetch updated cases from Legal One
     // 2. Map to Ploomes format
     // 3. Update deals/contacts in Ploomes
     
-    console.log('[SYNC] Sync completed successfully');
+    console.log('[SYNC] ✅ Sync completed successfully');
   } catch (error) {
-    console.error('[SYNC] Sync failed:', error.message);
+    console.error('[SYNC] ❌ Sync failed:', error.message);
   }
 }
 
@@ -67,7 +91,7 @@ async function syncLegalOneToPloomes() {
 async function startSyncLoop() {
   const interval = parseInt(process.env.SYNC_INTERVAL || '3600') * 1000;
   
-  console.log('\n[SYNC] Starting sync loop...');
+  console.log('[SYNC] 🔄 Starting sync loop...');
   
   // Run initial sync
   await syncPloomesToLegalOne();
@@ -79,13 +103,34 @@ async function startSyncLoop() {
     await syncLegalOneToPloomes();
   }, interval);
   
-  console.log(`[SYNC] Sync loop active (interval: ${interval/1000}s)`);
+  console.log(`[SYNC] ✅ Sync loop active (interval: ${interval/1000}s)`);
+  console.log('[SYNC] Press Ctrl+C to stop\n');
+}
+
+/**
+ * Manual sync command (can be called directly)
+ */
+async function manualSync(type, id) {
+  if (type === 'contact') {
+    return await syncManager.syncContact(id);
+  } else if (type === 'deal') {
+    return await syncManager.syncDeal(id);
+  } else {
+    throw new Error('Invalid sync type. Use "contact" or "deal"');
+  }
 }
 
 // Start the integration service
 if (require.main === module) {
+  // Check if Ploomes API key is configured
+  if (!process.env.PLOOMES_API_KEY) {
+    console.error('\n❌ ERROR: PLOOMES_API_KEY not configured');
+    console.error('Please set PLOOMES_API_KEY in your .env file\n');
+    process.exit(1);
+  }
+
   startSyncLoop().catch(error => {
-    console.error('Fatal error:', error);
+    console.error('\n❌ Fatal error:', error);
     process.exit(1);
   });
 }
@@ -93,6 +138,8 @@ if (require.main === module) {
 module.exports = {
   ploomesClient,
   legalOneClient,
+  syncManager,
   syncPloomesToLegalOne,
-  syncLegalOneToPloomes
+  syncLegalOneToPloomes,
+  manualSync
 };

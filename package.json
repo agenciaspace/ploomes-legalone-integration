@@ -7,7 +7,12 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "jest",
-    "lint": "eslint src/**/*.js"
+    "lint": "eslint src/**/*.js",
+    "cli": "node src/cli.js",
+    "sync:contact": "node src/cli.js sync-contact",
+    "sync:deal": "node src/cli.js sync-deal",
+    "stats": "node src/cli.js stats",
+    "demo": "open public/index.html"
   },
   "keywords": [
     "ploomes",
