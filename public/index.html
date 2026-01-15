@@ -59,13 +59,27 @@
 
         <!-- Phase 0: Authentication -->
         <div id="auth-section" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8 transition-all duration-300">
-            <h2 class="text-lg font-bold text-slate-800 mb-2">1. Configuração de Acesso</h2>
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-bold text-slate-800">1. Configuração de Acesso</h2>
+                <button onclick="clearApiKey()" id="clear-key-btn" class="hidden text-xs text-red-600 hover:text-red-700 underline">
+                    Limpar Chave Salva
+                </button>
+            </div>
             <p class="text-sm text-slate-500 mb-4">Insira a chave de API do seu ambiente Trial Ploomes para habilitar o painel.</p>
-            <div class="flex gap-4">
-                <input type="password" id="api-key" placeholder="Cole sua User-Key aqui..." class="flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
-                <button onclick="activatePanel()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors">
+            <div class="flex gap-2">
+                <div class="flex-1 relative">
+                    <input type="password" id="api-key" placeholder="Cole sua User-Key aqui..." class="w-full border border-slate-300 rounded-lg px-4 py-2 pr-10 focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                    <button onclick="toggleKeyVisibility()" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-eye" id="eye-icon"></i>
+                    </button>
+                </div>
+                <button onclick="activatePanel()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap">
                     Habilitar Sistema
                 </button>
+            </div>
+            <div id="key-saved-indicator" class="hidden mt-3 text-xs text-green-600 flex items-center gap-1">
+                <i class="fa-solid fa-check-circle"></i>
+                <span>Chave salva - será restaurada automaticamente na próxima vez</span>
             </div>
         </div>
 
@@ -201,6 +215,7 @@
             // Restore Auth
             if (state.apiKey) {
                 document.getElementById('api-key').value = state.apiKey;
+                document.getElementById('clear-key-btn').classList.remove('hidden');
                 activatePanel(false); // false = don't double log
             }
 
@@ -237,6 +252,11 @@
             state.apiKey = input.value.trim();
             saveState();
             
+            // Show key saved indicator (only when manually activating)
+            if (shouldLog) {
+                showKeySavedIndicator();
+            }
+            
             // UI Transition
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('workflow-container').classList.remove('opacity-50', 'pointer-events-none');
@@ -246,7 +266,7 @@
             indicator.className = 'flex items-center gap-2 text-xs font-medium text-green-700 bg-green-100 px-3 py-1 rounded-full border border-green-200';
             indicator.innerHTML = '<div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> Sistema Habilitado';
             
-            if(shouldLog) logToConsole('SYSTEM', 'Painel iniciado. Chave carregada.');
+            if(shouldLog) logToConsole('SYSTEM', 'Painel iniciado. Chave salva localmente.');
         }
 
         // --- Step 1: Create Client ---
@@ -456,16 +476,89 @@
         async function performCleanup() {
             const deleteResults = { deals: null, contacts: null };
             
+            // Create progress HTML
+            const progressHtml = `
+                <div class="text-left space-y-3 p-4">
+                    <div id="cleanup-step-1" class="flex items-center gap-3 text-sm">
+                        <div class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center">
+                            <i class="fa-solid fa-spinner fa-spin text-slate-400" id="icon-cleanup-1"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-medium text-slate-700">Excluindo oportunidade...</div>
+                            <div class="text-xs text-slate-400" id="status-cleanup-1">Aguarde...</div>
+                        </div>
+                    </div>
+                    <div id="cleanup-step-2" class="flex items-center gap-3 text-sm opacity-50">
+                        <div class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center">
+                            <i class="fa-solid fa-clock text-slate-400" id="icon-cleanup-2"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-medium text-slate-700">Excluindo contato...</div>
+                            <div class="text-xs text-slate-400" id="status-cleanup-2">Aguardando...</div>
+                        </div>
+                    </div>
+                    <div id="cleanup-step-3" class="flex items-center gap-3 text-sm opacity-50">
+                        <div class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center">
+                            <i class="fa-solid fa-clock text-slate-400" id="icon-cleanup-3"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-medium text-slate-700">Limpando cache local</div>
+                            <div class="text-xs text-slate-400" id="status-cleanup-3">Aguardando...</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
             Swal.fire({
-                title: 'Limpando Base...',
-                html: 'Excluindo registros criados via API.<br>Por favor aguarde.',
+                title: '<span class="text-xl">🧹 Limpando Base</span>',
+                html: progressHtml,
                 allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
+                showConfirmButton: false,
+                didOpen: () => {
+                    // Add custom styling
+                    const popup = Swal.getPopup();
+                    popup.style.width = '500px';
+                }
             });
+
+            // Helper function to update step status
+            function updateStep(stepNum, status, message) {
+                const step = document.getElementById(`cleanup-step-${stepNum}`);
+                const icon = document.getElementById(`icon-cleanup-${stepNum}`);
+                const statusText = document.getElementById(`status-cleanup-${stepNum}`);
+                
+                step.classList.remove('opacity-50');
+                
+                if (status === 'loading') {
+                    icon.className = 'fa-solid fa-spinner fa-spin text-blue-500';
+                    statusText.textContent = message;
+                    statusText.className = 'text-xs text-blue-500';
+                } else if (status === 'success') {
+                    icon.className = 'fa-solid fa-check text-green-500';
+                    statusText.textContent = message;
+                    statusText.className = 'text-xs text-green-600';
+                    step.querySelector('.w-6').classList.remove('bg-slate-200');
+                    step.querySelector('.w-6').classList.add('bg-green-100');
+                } else if (status === 'error') {
+                    icon.className = 'fa-solid fa-exclamation-triangle text-orange-500';
+                    statusText.textContent = message;
+                    statusText.className = 'text-xs text-orange-600';
+                    step.querySelector('.w-6').classList.remove('bg-slate-200');
+                    step.querySelector('.w-6').classList.add('bg-orange-100');
+                } else if (status === 'skipped') {
+                    icon.className = 'fa-solid fa-minus text-slate-400';
+                    statusText.textContent = message;
+                    statusText.className = 'text-xs text-slate-400';
+                }
+            }
 
             // Delete Deal first (to avoid foreign key issues)
             if (state.dealId) {
+                updateStep(1, 'loading', `Deletando ID ${state.dealId}...`);
                 logToConsole('DELETE', `/Deals(${state.dealId})`, null);
+                
+                await new Promise(r => setTimeout(r, 300)); // Small delay for visual feedback
+                
                 try {
                     const response = await fetchWithTimeout(`${API_BASE}/Deals(${state.dealId})`, {
                         method: 'DELETE',
@@ -474,21 +567,32 @@
                     
                     if (response.ok || response.status === 204) {
                         deleteResults.deals = 'success';
+                        updateStep(1, 'success', 'Oportunidade excluída do Ploomes!');
                         logToConsole('SUCCESS', `Oportunidade ID ${state.dealId} excluída com sucesso`);
                     } else {
                         deleteResults.deals = 'error';
+                        updateStep(1, 'error', `Erro: ${response.status}`);
                         logToConsole('WARN', `Erro ao excluir oportunidade: ${response.status}`);
                     }
                 } catch (e) { 
                     deleteResults.deals = 'error';
+                    updateStep(1, 'error', 'Falha na exclusão');
                     logToConsole('WARN', `Falha ao excluir oportunidade: ${e.message}`);
                     console.error(e); 
                 }
+            } else {
+                updateStep(1, 'skipped', 'Nenhuma oportunidade para excluir');
             }
+
+            await new Promise(r => setTimeout(r, 300));
 
             // Delete Contact
             if (state.clientId) {
+                updateStep(2, 'loading', `Deletando ID ${state.clientId}...`);
                 logToConsole('DELETE', `/Contacts(${state.clientId})`, null);
+                
+                await new Promise(r => setTimeout(r, 300));
+                
                 try {
                     const response = await fetchWithTimeout(`${API_BASE}/Contacts(${state.clientId})`, {
                         method: 'DELETE',
@@ -497,48 +601,69 @@
                     
                     if (response.ok || response.status === 204) {
                         deleteResults.contacts = 'success';
+                        updateStep(2, 'success', 'Contato excluído do Ploomes!');
                         logToConsole('SUCCESS', `Contato ID ${state.clientId} excluído com sucesso`);
                     } else {
                         deleteResults.contacts = 'error';
+                        updateStep(2, 'error', `Erro: ${response.status}`);
                         logToConsole('WARN', `Erro ao excluir contato: ${response.status}`);
                     }
                 } catch (e) { 
                     deleteResults.contacts = 'error';
+                    updateStep(2, 'error', 'Falha na exclusão');
                     logToConsole('WARN', `Falha ao excluir contato: ${e.message}`);
                     console.error(e); 
                 }
+            } else {
+                updateStep(2, 'skipped', 'Nenhum contato para excluir');
             }
 
-            // Show results and reload
-            setTimeout(() => {
-                let resultMessage = 'Limpeza concluída!\n\n';
-                
-                if (deleteResults.deals === 'success') {
-                    resultMessage += '✅ Oportunidade excluída do Ploomes\n';
-                } else if (deleteResults.deals === 'error') {
-                    resultMessage += '⚠️ Oportunidade não foi excluída (verifique logs)\n';
-                }
-                
-                if (deleteResults.contacts === 'success') {
-                    resultMessage += '✅ Contato excluído do Ploomes\n';
-                } else if (deleteResults.contacts === 'error') {
-                    resultMessage += '⚠️ Contato não foi excluído (verifique logs)\n';
-                }
-                
-                resultMessage += '\n🔄 Reiniciando painel...';
-                
-                Swal.fire({
-                    title: 'Limpeza Concluída',
-                    text: resultMessage,
-                    icon: deleteResults.contacts === 'success' || deleteResults.deals === 'success' ? 'success' : 'warning',
-                    timer: 3000,
-                    showConfirmButton: false
-                });
-                
-                localStorage.removeItem('ploomesDemoState');
-                
-                setTimeout(() => location.reload(), 3000);
-            }, 500);
+            await new Promise(r => setTimeout(r, 300));
+
+            // Clear local storage
+            updateStep(3, 'loading', 'Limpando dados locais...');
+            await new Promise(r => setTimeout(r, 300));
+            localStorage.removeItem('ploomesDemoState');
+            updateStep(3, 'success', 'Cache local limpo!');
+            
+            // Show final results
+            await new Promise(r => setTimeout(r, 800));
+            
+            const totalSuccess = (deleteResults.deals === 'success' ? 1 : 0) + (deleteResults.contacts === 'success' ? 1 : 0);
+            const totalErrors = (deleteResults.deals === 'error' ? 1 : 0) + (deleteResults.contacts === 'error' ? 1 : 0);
+            
+            let finalIcon = 'success';
+            let finalTitle = '✅ Limpeza Concluída!';
+            
+            if (totalErrors > 0 && totalSuccess === 0) {
+                finalIcon = 'error';
+                finalTitle = '❌ Erro na Limpeza';
+            } else if (totalErrors > 0) {
+                finalIcon = 'warning';
+                finalTitle = '⚠️ Limpeza Parcial';
+            }
+            
+            Swal.fire({
+                title: finalTitle,
+                html: `
+                    <div class="text-sm text-left space-y-2">
+                        ${deleteResults.deals === 'success' ? '<div class="text-green-600">✅ Oportunidade excluída</div>' : ''}
+                        ${deleteResults.deals === 'error' ? '<div class="text-orange-600">⚠️ Oportunidade não excluída</div>' : ''}
+                        ${deleteResults.contacts === 'success' ? '<div class="text-green-600">✅ Contato excluído</div>' : ''}
+                        ${deleteResults.contacts === 'error' ? '<div class="text-orange-600">⚠️ Contato não excluído</div>' : ''}
+                        <div class="text-green-600">✅ Cache local limpo</div>
+                        <div class="mt-4 pt-3 border-t text-center text-slate-500">
+                            🔄 Reiniciando painel em 3s...
+                        </div>
+                    </div>
+                `,
+                icon: finalIcon,
+                timer: 3000,
+                showConfirmButton: false,
+                timerProgressBar: true
+            });
+            
+            setTimeout(() => location.reload(), 3000);
         }
 
         // --- Helpers ---
@@ -642,6 +767,74 @@
                 confirmButtonText: 'Ótimo',
                 confirmButtonColor: '#4f46e5'
             });
+        }
+
+        // --- API Key Management ---
+        function toggleKeyVisibility() {
+            const input = document.getElementById('api-key');
+            const icon = document.getElementById('eye-icon');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-solid fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-solid fa-eye';
+            }
+        }
+
+        function clearApiKey() {
+            Swal.fire({
+                title: 'Limpar Chave Salva?',
+                text: 'Isso removerá a chave API salva. Você precisará inseri-la novamente na próxima vez.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'Sim, limpar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Clear only the API key but keep other state
+                    state.apiKey = '';
+                    saveState();
+                    
+                    // Clear input and show auth section
+                    document.getElementById('api-key').value = '';
+                    document.getElementById('auth-section').classList.remove('hidden');
+                    document.getElementById('workflow-container').classList.add('opacity-50', 'pointer-events-none');
+                    document.getElementById('key-saved-indicator').classList.add('hidden');
+                    document.getElementById('clear-key-btn').classList.add('hidden');
+                    
+                    // Update connection indicator
+                    const indicator = document.getElementById('connection-indicator');
+                    indicator.className = 'flex items-center gap-2 text-xs font-medium text-slate-400 bg-slate-100 px-3 py-1 rounded-full';
+                    indicator.innerHTML = '<div class="w-2 h-2 rounded-full bg-slate-400"></div> Aguardando Chave';
+                    
+                    logToConsole('SYSTEM', 'Chave API removida.');
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Chave Removida',
+                        text: 'A chave API foi removida com sucesso.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+            });
+        }
+
+        function showKeySavedIndicator() {
+            const indicator = document.getElementById('key-saved-indicator');
+            const clearBtn = document.getElementById('clear-key-btn');
+            
+            indicator.classList.remove('hidden');
+            clearBtn.classList.remove('hidden');
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                indicator.classList.add('hidden');
+            }, 5000);
         }
         
         // Initialize
