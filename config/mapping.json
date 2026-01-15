@@ -1,0 +1,47 @@
+{
+  "fieldMappings": {
+    "contact": {
+      "ploomes_to_legalone": {
+        "Name": "client_name",
+        "TypeId": "entity_type",
+        "Email": "primary_email",
+        "CNPJ": "tax_id",
+        "CPF": "tax_id"
+      },
+      "legalone_to_ploomes": {
+        "client_name": "Name",
+        "entity_type": "TypeId",
+        "primary_email": "Email",
+        "tax_id": "CNPJ"
+      }
+    },
+    "deal": {
+      "ploomes_to_legalone": {
+        "Title": "case_title",
+        "Amount": "case_value",
+        "StatusId": "case_status",
+        "ContactId": "client_id"
+      },
+      "legalone_to_ploomes": {
+        "case_title": "Title",
+        "case_value": "Amount",
+        "case_status": "StatusId",
+        "client_id": "ContactId"
+      }
+    }
+  },
+  "statusMappings": {
+    "ploomes_to_legalone": {
+      "1": "pending",
+      "2": "in_progress",
+      "3": "completed",
+      "4": "cancelled"
+    },
+    "legalone_to_ploomes": {
+      "pending": 1,
+      "in_progress": 2,
+      "completed": 3,
+      "cancelled": 4
+    }
+  }
+}

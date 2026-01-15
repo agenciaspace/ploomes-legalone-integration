@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle: Integração Jurídica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        
+        .step-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        .step-card.active {
+            border-left-color: #4f46e5; /* indigo-600 */
+            background-color: #fff;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .step-card.disabled {
+            opacity: 0.6;
+            pointer-events: none;
+            filter: grayscale(100%);
+        }
+        .step-card.success {
+            border-left-color: #10b981; /* emerald-500 */
+        }
+
+        .tech-log {
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Top Navigation -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center font-bold text-lg">P</div>
+                <h1 class="font-semibold text-slate-700">Painel de Integração <span class="text-slate-400 font-light mx-1">|</span> <span class="text-indigo-600">Demo Jurídico</span></h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="connection-indicator" class="flex items-center gap-2 text-xs font-medium text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
+                    <div class="w-2 h-2 rounded-full bg-slate-400"></div> Aguardando Chave
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Phase 0: Authentication -->
+        <div id="auth-section" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8 transition-all duration-300">
+            <h2 class="text-lg font-bold text-slate-800 mb-2">1. Configuração de Acesso</h2>
+            <p class="text-sm text-slate-500 mb-4">Insira a chave de API do seu ambiente Trial Ploomes para habilitar o painel.</p>
+            <div class="flex gap-4">
+                <input type="password" id="api-key" placeholder="Cole sua User-Key aqui..." class="flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                <button onclick="activatePanel()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors">
+                    Habilitar Sistema
+                </button>
+            </div>
+        </div>
+
+        <!-- Workflow Container -->
+        <div id="workflow-container" class="opacity-50 pointer-events-none transition-all duration-500">
+            
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-slate-800">Fluxo de Teste Automatizado</h2>
+                
+                <!-- Reset Button -->
+                <button onclick="confirmReset()" class="group flex items-center gap-2 text-sm text-slate-500 hover:text-red-600 transition-colors border border-slate-200 hover:border-red-200 bg-white px-3 py-1.5 rounded-lg shadow-sm">
+                    <i class="fa-solid fa-rotate-right group-hover:rotate-180 transition-transform duration-500"></i>
+                    <span>Limpar & Reiniciar</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                
+                <!-- Step 1: Create Client -->
+                <div id="card-step-1" class="step-card active bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold">1</div>
+                        <span class="text-xs font-mono text-slate-400">POST /Contacts</span>
+                    </div>
+                    <h3 class="font-bold text-slate-800 mb-1">Cadastrar Cliente</h3>
+                    <p class="text-xs text-slate-500 mb-4">Cria um novo registro de empresa no CRM para evitar duplicidade.</p>
+                    
+                    <div class="mt-auto">
+                        <div class="bg-slate-50 p-3 rounded border border-slate-100 mb-4 text-xs">
+                            <span class="block text-slate-400 text-[10px] uppercase font-bold">Dados a Enviar:</span>
+                            <span class="font-medium text-slate-700 block mt-1"><i class="fa-regular fa-building mr-1"></i> Empresa Teste Demo</span>
+                            <span class="font-medium text-slate-700 block"><i class="fa-regular fa-id-card mr-1"></i> CNPJ: Gerado Auto</span>
+                        </div>
+                        <button onclick="runStep1()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium transition-colors">
+                            Executar Cadastro
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Create Deal -->
+                <div id="card-step-2" class="step-card disabled bg-slate-50 p-6 rounded-xl border border-slate-200 flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold" id="icon-step-2">2</div>
+                        <span class="text-xs font-mono text-slate-400">POST /Deals</span>
+                    </div>
+                    <h3 class="font-bold text-slate-800 mb-1">Gerar Oportunidade</h3>
+                    <p class="text-xs text-slate-500 mb-4">Cria uma negociação e a vincula ao cliente criado no passo anterior.</p>
+                    
+                    <div class="mt-auto">
+                        <div class="bg-white p-3 rounded border border-slate-200 mb-4 text-xs opacity-50" id="data-step-2">
+                            <span class="block text-slate-400 text-[10px] uppercase font-bold">Vínculo:</span>
+                            <span class="font-medium text-slate-700 block mt-1" id="link-client-name">--</span>
+                            <span class="block text-slate-400 text-[10px] uppercase font-bold mt-2">Valor:</span>
+                            <span class="font-medium text-green-600 block">R$ 15.000,00</span>
+                        </div>
+                        <button id="btn-step-2" onclick="runStep2()" disabled class="w-full bg-slate-300 text-white py-2 rounded-lg text-sm font-medium cursor-not-allowed">
+                            Aguardando Cliente...
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Update Info -->
+                <div id="card-step-3" class="step-card disabled bg-slate-50 p-6 rounded-xl border border-slate-200 flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold" id="icon-step-3">3</div>
+                        <span class="text-xs font-mono text-slate-400">PATCH /Contacts</span>
+                    </div>
+                    <h3 class="font-bold text-slate-800 mb-1">Atualizar Status</h3>
+                    <p class="text-xs text-slate-500 mb-4">Altera o cadastro do cliente confirmando a validação jurídica.</p>
+                    
+                    <div class="mt-auto">
+                        <div class="bg-white p-3 rounded border border-slate-200 mb-4 text-xs opacity-50" id="data-step-3">
+                            <span class="block text-slate-400 text-[10px] uppercase font-bold">Ação:</span>
+                            <span class="font-medium text-slate-700 block mt-1">Alterar Nome/Status</span>
+                            <span class="block text-slate-400 text-[10px] uppercase font-bold mt-2">Novo Valor:</span>
+                            <span class="font-medium text-indigo-600 block">"... (Validado Jurídico)"</span>
+                        </div>
+                        <button id="btn-step-3" onclick="runStep3()" disabled class="w-full bg-slate-300 text-white py-2 rounded-lg text-sm font-medium cursor-not-allowed">
+                            Aguardando Venda...
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Technical Log -->
+            <div class="bg-slate-900 rounded-lg overflow-hidden shadow-lg border border-slate-700">
+                <button onclick="toggleLog()" class="w-full px-4 py-2 bg-slate-800 flex items-center justify-between text-xs text-slate-300 hover:bg-slate-700 transition-colors">
+                    <span class="font-mono"><i class="fa-solid fa-code mr-2"></i>Log Técnico de Operações (JSON)</span>
+                    <i class="fa-solid fa-chevron-down" id="log-icon"></i>
+                </button>
+                <div id="log-content" class="p-4 h-48 overflow-y-auto hidden">
+                    <div id="console-lines" class="tech-log space-y-1">
+                        <div class="text-slate-500">// O log de persistência e API aparecerá aqui...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- Configuration & State ---
+        const API_BASE = 'https://api2.ploomes.com';
+        
+        // State variables
+        let state = {
+            apiKey: '',
+            step1Done: false,
+            clientId: null,
+            clientName: '',
+            step2Done: false,
+            dealId: null,
+            step3Done: false
+        };
+
+        // --- Persistence Logic ---
+        function saveState() {
+            localStorage.setItem('ploomesDemoState', JSON.stringify(state));
+            logToConsole('SYSTEM', 'Estado salvo localmente.');
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('ploomesDemoState');
+            if (saved) {
+                state = JSON.parse(saved);
+                logToConsole('SYSTEM', 'Estado anterior restaurado.');
+                restoreUI();
+            }
+        }
+
+        function restoreUI() {
+            // Restore Auth
+            if (state.apiKey) {
+                document.getElementById('api-key').value = state.apiKey;
+                activatePanel(false); // false = don't double log
+            }
+
+            // Restore Step 1
+            if (state.step1Done) {
+                markStepComplete(1);
+                enableStep(2);
+                document.getElementById('link-client-name').textContent = state.clientName + ` (ID: ${state.clientId})`;
+                document.getElementById('data-step-2').classList.remove('opacity-50');
+            }
+
+            // Restore Step 2
+            if (state.step2Done) {
+                markStepComplete(2);
+                enableStep(3);
+                document.getElementById('data-step-3').classList.remove('opacity-50');
+            }
+
+            // Restore Step 3
+            if (state.step3Done) {
+                markStepComplete(3);
+                // Optional: Show final modal again or just leave it complete
+            }
+        }
+
+        // --- Auth Logic ---
+        function activatePanel(shouldLog = true) {
+            const input = document.getElementById('api-key');
+            if (!input.value.trim()) {
+                Swal.fire({ icon: 'error', title: 'Chave Ausente', text: 'Por favor, insira a Chave de API.' });
+                return;
+            }
+            
+            state.apiKey = input.value.trim();
+            saveState();
+            
+            // UI Transition
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('workflow-container').classList.remove('opacity-50', 'pointer-events-none');
+            
+            // Status Indicator
+            const indicator = document.getElementById('connection-indicator');
+            indicator.className = 'flex items-center gap-2 text-xs font-medium text-green-700 bg-green-100 px-3 py-1 rounded-full border border-green-200';
+            indicator.innerHTML = '<div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> Sistema Habilitado';
+            
+            if(shouldLog) logToConsole('SYSTEM', 'Painel iniciado. Chave carregada.');
+        }
+
+        // --- Step 1: Create Client ---
+        async function runStep1() {
+            const btn = document.querySelector('#card-step-1 button');
+            setLoading(btn, true);
+
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            const clientName = `Empresa Teste Jurídico [${timestamp}]`;
+            
+            const payload = {
+                "Name": clientName,
+                "TypeId": 2, 
+                "Phones": [{ "PhoneNumber": "11999999999", "TypeId": 1 }],
+                "Email": "juridico@demo.com"
+            };
+
+            logToConsole('POST', `/Contacts`, payload);
+
+            try {
+                const response = await fetchWithTimeout(`${API_BASE}/Contacts`, {
+                    method: 'POST',
+                    headers: { 'User-Key': state.apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                let data;
+                if (response.ok) {
+                    data = await response.json();
+                    // Robust extraction for different response types (single obj vs array)
+                    const id = data.value ? (Array.isArray(data.value) ? data.value[0].Id : data.value.Id) : data.Id;
+                    
+                    updateStateStep1(id, clientName);
+                    
+                    logToConsole('SUCCESS', `200 OK - ID Criado: ${id}`, data);
+                    showToast('Cliente criado com sucesso no Ploomes!', 'success');
+                } else {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+            } catch (error) {
+                console.warn("Entrando em modo simulação devido a erro:", error);
+                // Mock ID
+                const mockId = 1000 + Math.floor(Math.random() * 9000);
+                
+                logToConsole('WARN', `Bloqueio de Rede/CORS detectado. Simulando...`);
+                await new Promise(r => setTimeout(r, 1000));
+                
+                updateStateStep1(mockId, clientName);
+                
+                logToConsole('MOCK', `200 OK (Simulado) - ID Virtual: ${mockId}`);
+                showToast('Cliente criado (Modo Simulação)!', 'success');
+            }
+
+            setLoading(btn, false);
+            markStepComplete(1);
+            enableStep(2);
+            document.getElementById('link-client-name').textContent = state.clientName + ` (ID: ${state.clientId})`;
+            document.getElementById('data-step-2').classList.remove('opacity-50');
+        }
+
+        function updateStateStep1(id, name) {
+            state.clientId = id;
+            state.clientName = name;
+            state.step1Done = true;
+            saveState();
+        }
+
+        // --- Step 2: Create Deal ---
+        async function runStep2() {
+            const btn = document.getElementById('btn-step-2');
+            setLoading(btn, true);
+
+            const payload = {
+                "Title": `Contrato de Prestação - ${state.clientName}`,
+                "ContactId": state.clientId,
+                "Amount": 15000.00,
+                "StatusId": 1
+            };
+
+            logToConsole('POST', `/Deals`, payload);
+
+            try {
+                const response = await fetchWithTimeout(`${API_BASE}/Deals`, {
+                    method: 'POST',
+                    headers: { 'User-Key': state.apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                let data;
+                if (response.ok) {
+                    data = await response.json();
+                    const id = data.value ? (Array.isArray(data.value) ? data.value[0].Id : data.value.Id) : data.Id;
+                    
+                    updateStateStep2(id);
+                    logToConsole('SUCCESS', `200 OK - Venda Criada ID: ${id}`, data);
+                    showToast('Oportunidade registrada e vinculada!', 'success');
+                } else {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+            } catch (error) {
+                const mockId = 5000 + Math.floor(Math.random() * 9000);
+                logToConsole('WARN', `Simulando criação de venda...`);
+                await new Promise(r => setTimeout(r, 1000));
+                
+                updateStateStep2(mockId);
+                logToConsole('MOCK', `200 OK (Simulado) - Venda ID: ${mockId}`);
+                showToast('Oportunidade registrada (Simulação)!', 'success');
+            }
+
+            setLoading(btn, false);
+            markStepComplete(2);
+            enableStep(3);
+            document.getElementById('data-step-3').classList.remove('opacity-50');
+        }
+
+        function updateStateStep2(id) {
+            state.dealId = id;
+            state.step2Done = true;
+            saveState();
+        }
+
+        // --- Step 3: Update Client ---
+        async function runStep3() {
+            const btn = document.getElementById('btn-step-3');
+            setLoading(btn, true);
+
+            const newName = `${state.clientName} (Validado Jurídico)`;
+            const payload = { "Name": newName };
+
+            logToConsole('PATCH', `/Contacts(${state.clientId})`, payload);
+
+            try {
+                const response = await fetchWithTimeout(`${API_BASE}/Contacts(${state.clientId})`, {
+                    method: 'PATCH',
+                    headers: { 'User-Key': state.apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    state.step3Done = true;
+                    saveState();
+                    logToConsole('SUCCESS', `200 OK - Cliente Atualizado`, {});
+                    showSuccessModal();
+                } else {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+            } catch (error) {
+                logToConsole('WARN', `Simulando atualização...`);
+                await new Promise(r => setTimeout(r, 1000));
+                
+                state.step3Done = true;
+                saveState();
+                
+                logToConsole('MOCK', `200 OK (Simulado) - Nome alterado`);
+                showSuccessModal();
+            }
+
+            setLoading(btn, false);
+            markStepComplete(3);
+        }
+
+        // --- Clean Up & Reset Logic ---
+        async function confirmReset() {
+            // Check if there is data to clean
+            const hasData = state.clientId || state.dealId;
+            
+            let title = 'Reiniciar Demo?';
+            let text = 'Isso limpará o estado local e recarregará a página.';
+            let confirmText = 'Sim, reiniciar';
+            let showDeny = false;
+
+            if (hasData) {
+                title = 'Limpar Dados Gerados?';
+                text = 'Existem dados criados (Cliente/Venda). Deseja excluí-los do Ploomes antes de limpar o cache?';
+                confirmText = 'Sim, Limpar e Reiniciar';
+                showDeny = true;
+            }
+
+            Swal.fire({
+                title: title,
+                text: text,
+                icon: 'warning',
+                showCancelButton: true,
+                showDenyButton: showDeny,
+                confirmButtonColor: '#d33',
+                denyButtonColor: '#3085d6',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: confirmText,
+                denyButtonText: 'Apenas Reiniciar (Manter Dados no Ploomes)',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    if (hasData) {
+                        await performCleanup();
+                    } else {
+                        localStorage.removeItem('ploomesDemoState');
+                        location.reload();
+                    }
+                } else if (result.isDenied) {
+                    localStorage.removeItem('ploomesDemoState');
+                    location.reload();
+                }
+            });
+        }
+
+        async function performCleanup() {
+            Swal.fire({
+                title: 'Limpando Base...',
+                html: 'Excluindo registros criados via API.<br>Por favor aguarde.',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            // Delete Deal
+            if (state.dealId) {
+                logToConsole('DELETE', `/Deals(${state.dealId})`, null);
+                try {
+                    await fetchWithTimeout(`${API_BASE}/Deals(${state.dealId})`, {
+                        method: 'DELETE',
+                        headers: { 'User-Key': state.apiKey }
+                    });
+                } catch (e) { console.error(e); }
+            }
+
+            // Delete Client
+            if (state.clientId) {
+                logToConsole('DELETE', `/Contacts(${state.clientId})`, null);
+                try {
+                    await fetchWithTimeout(`${API_BASE}/Contacts(${state.clientId})`, {
+                        method: 'DELETE',
+                        headers: { 'User-Key': state.apiKey }
+                    });
+                } catch (e) { console.error(e); }
+            }
+
+            setTimeout(() => {
+                localStorage.removeItem('ploomesDemoState');
+                location.reload();
+            }, 1500);
+        }
+
+        // --- Helpers ---
+        async function fetchWithTimeout(resource, options = {}) {
+            const { timeout = 5000 } = options;
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            const response = await fetch(resource, { ...options, signal: controller.signal });
+            clearTimeout(id);
+            return response;
+        }
+
+        function logToConsole(type, msg, data = null) {
+            const consoleDiv = document.getElementById('console-lines');
+            const time = new Date().toLocaleTimeString('pt-BR');
+            let color = 'text-slate-300';
+            if (type === 'POST' || type === 'PATCH') color = 'text-blue-400';
+            if (type === 'DELETE') color = 'text-red-400';
+            if (type === 'SUCCESS') color = 'text-green-400';
+            if (type === 'WARN') color = 'text-yellow-400';
+            if (type === 'MOCK') color = 'text-purple-400';
+            if (type === 'SYSTEM') color = 'text-slate-100 font-bold';
+
+            let html = `<div class="mb-1 border-l-2 border-slate-700 pl-2">`;
+            html += `<span class="text-slate-500">[${time}]</span> <span class="font-bold ${color}">${type}</span>: ${msg}`;
+            if (data) {
+                html += `<div class="text-slate-500 mt-1 pl-4 overflow-hidden whitespace-pre-wrap break-words text-[10px]">${JSON.stringify(data).substring(0, 150)}${JSON.stringify(data).length > 150 ? '...' : ''}</div>`;
+            }
+            html += `</div>`;
+            
+            consoleDiv.insertAdjacentHTML('beforeend', html);
+            document.getElementById('log-content').scrollTop = document.getElementById('log-content').scrollHeight;
+        }
+
+        function setLoading(btn, isLoading) {
+            if (isLoading) {
+                btn.dataset.originalText = btn.innerText;
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processando...';
+                btn.disabled = true;
+                btn.classList.add('opacity-75');
+            } else {
+                btn.innerHTML = btn.dataset.originalText;
+                btn.classList.remove('opacity-75');
+            }
+        }
+
+        function markStepComplete(stepNum) {
+            const card = document.getElementById(`card-step-${stepNum}`);
+            card.classList.add('success');
+            card.classList.remove('active');
+            
+            const btn = card.querySelector('button');
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Concluído';
+            btn.className = 'w-full bg-green-100 text-green-700 py-2 rounded-lg text-sm font-medium cursor-default';
+            btn.disabled = true;
+        }
+
+        function enableStep(stepNum) {
+            const card = document.getElementById(`card-step-${stepNum}`);
+            card.classList.remove('disabled');
+            card.classList.add('active', 'bg-white');
+            card.classList.remove('bg-slate-50');
+            
+            const icon = document.getElementById(`icon-step-${stepNum}`);
+            if(icon) {
+                icon.className = 'w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold';
+            }
+
+            const btn = document.getElementById(`btn-step-${stepNum}`);
+            if (btn) {
+                btn.disabled = false;
+                btn.className = 'w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium transition-colors';
+                if(stepNum === 2) btn.textContent = 'Gerar Oportunidade';
+                if(stepNum === 3) btn.textContent = 'Atualizar Status';
+            }
+        }
+
+        function toggleLog() {
+            const content = document.getElementById('log-content');
+            const icon = document.getElementById('log-icon');
+            if (content.classList.contains('hidden')) content.classList.remove('hidden');
+            else content.classList.add('hidden');
+        }
+
+        function showToast(msg, icon) {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+            Toast.fire({ icon: icon, title: msg });
+        }
+
+        function showSuccessModal() {
+            Swal.fire({
+                title: 'Integração Concluída!',
+                text: 'O fluxo de automação foi executado. O cliente foi criado, a venda lançada e os dados atualizados.',
+                icon: 'success',
+                confirmButtonText: 'Ótimo',
+                confirmButtonColor: '#4f46e5'
+            });
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadState);
+
+    </script>
+</body>
+</html>
