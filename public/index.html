@@ -454,6 +454,8 @@
         }
 
         async function performCleanup() {
+            const deleteResults = { deals: null, contacts: null };
+            
             Swal.fire({
                 title: 'Limpando Base...',
                 html: 'Excluindo registros criados via API.<br>Por favor aguarde.',
@@ -461,32 +463,82 @@
                 didOpen: () => Swal.showLoading()
             });
 
-            // Delete Deal
+            // Delete Deal first (to avoid foreign key issues)
             if (state.dealId) {
                 logToConsole('DELETE', `/Deals(${state.dealId})`, null);
                 try {
-                    await fetchWithTimeout(`${API_BASE}/Deals(${state.dealId})`, {
+                    const response = await fetchWithTimeout(`${API_BASE}/Deals(${state.dealId})`, {
                         method: 'DELETE',
                         headers: { 'User-Key': state.apiKey }
                     });
-                } catch (e) { console.error(e); }
+                    
+                    if (response.ok || response.status === 204) {
+                        deleteResults.deals = 'success';
+                        logToConsole('SUCCESS', `Oportunidade ID ${state.dealId} excluída com sucesso`);
+                    } else {
+                        deleteResults.deals = 'error';
+                        logToConsole('WARN', `Erro ao excluir oportunidade: ${response.status}`);
+                    }
+                } catch (e) { 
+                    deleteResults.deals = 'error';
+                    logToConsole('WARN', `Falha ao excluir oportunidade: ${e.message}`);
+                    console.error(e); 
+                }
             }
 
-            // Delete Client
+            // Delete Contact
             if (state.clientId) {
                 logToConsole('DELETE', `/Contacts(${state.clientId})`, null);
                 try {
-                    await fetchWithTimeout(`${API_BASE}/Contacts(${state.clientId})`, {
+                    const response = await fetchWithTimeout(`${API_BASE}/Contacts(${state.clientId})`, {
                         method: 'DELETE',
                         headers: { 'User-Key': state.apiKey }
                     });
-                } catch (e) { console.error(e); }
+                    
+                    if (response.ok || response.status === 204) {
+                        deleteResults.contacts = 'success';
+                        logToConsole('SUCCESS', `Contato ID ${state.clientId} excluído com sucesso`);
+                    } else {
+                        deleteResults.contacts = 'error';
+                        logToConsole('WARN', `Erro ao excluir contato: ${response.status}`);
+                    }
+                } catch (e) { 
+                    deleteResults.contacts = 'error';
+                    logToConsole('WARN', `Falha ao excluir contato: ${e.message}`);
+                    console.error(e); 
+                }
             }
 
+            // Show results and reload
             setTimeout(() => {
+                let resultMessage = 'Limpeza concluída!\n\n';
+                
+                if (deleteResults.deals === 'success') {
+                    resultMessage += '✅ Oportunidade excluída do Ploomes\n';
+                } else if (deleteResults.deals === 'error') {
+                    resultMessage += '⚠️ Oportunidade não foi excluída (verifique logs)\n';
+                }
+                
+                if (deleteResults.contacts === 'success') {
+                    resultMessage += '✅ Contato excluído do Ploomes\n';
+                } else if (deleteResults.contacts === 'error') {
+                    resultMessage += '⚠️ Contato não foi excluído (verifique logs)\n';
+                }
+                
+                resultMessage += '\n🔄 Reiniciando painel...';
+                
+                Swal.fire({
+                    title: 'Limpeza Concluída',
+                    text: resultMessage,
+                    icon: deleteResults.contacts === 'success' || deleteResults.deals === 'success' ? 'success' : 'warning',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+                
                 localStorage.removeItem('ploomesDemoState');
-                location.reload();
-            }, 1500);
+                
+                setTimeout(() => location.reload(), 3000);
+            }, 500);
         }
 
         // --- Helpers ---

@@ -12,7 +12,8 @@
     "sync:contact": "node src/cli.js sync-contact",
     "sync:deal": "node src/cli.js sync-deal",
     "stats": "node src/cli.js stats",
-    "demo": "open public/index.html"
+    "demo": "open public/index.html",
+    "cleanup": "node src/cleanup.js"
   },
   "keywords": [
     "ploomes",
