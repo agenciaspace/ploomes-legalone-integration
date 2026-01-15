@@ -49,3 +49,4 @@ secrets.json
 
 # Data files
 data/
+.vercel
